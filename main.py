@@ -9,32 +9,41 @@
 
 #saida.save(caminho_saida) 
 
-import streamlit as st
+from flask import Flask, request, send_file, jsonify
 from rembg import remove
 from PIL import Image
 import requests
 from io import BytesIO
 
-st.title("🔍 Remoção de Fundo de Imagem")
+app = Flask(__name__)
 
-# Pega parâmetros da URL (como ?img_url=https://...)
-params = st.experimental_get_query_params()
-img_url = params.get("img_url", [None])[0]
-
-if img_url:
-    st.write(f"📡 URL recebida: {img_url}")
+@app.route('/')
+def index():
+    img_url = request.args.get('img_url')
+    if not img_url:
+        return '''
+            <h2>Envie uma imagem com fundo para remover</h2>
+            Exemplo: ?img_url=https://site.com/imagem.jpg
+        '''
 
     try:
-        res = requests.get(img_url)
-        res.raise_for_status()
+        print(f"[INFO] Baixando imagem de: {img_url}")
+        r = requests.get(img_url)
+        r.raise_for_status()
 
-        image = Image.open(BytesIO(res.content)).convert("RGBA")
-        st.image(image, caption="📸 Imagem Original")
+        input_image = Image.open(BytesIO(r.content)).convert("RGBA")
 
-        output = remove(image)
-        st.image(output, caption="✅ Imagem sem fundo")
+        print(f"[INFO] Removendo fundo...")
+        output_image = remove(input_image)
 
+        print(f"[INFO] Fundo removido com sucesso")
+
+        buf = BytesIO()
+        output_image.save(buf, format="PNG")
+        buf.seek(0)
+
+        return send_file(buf, mimetype='image/png')
+    
     except Exception as e:
-        st.error(f"❌ Erro ao processar imagem: {e}")
-else:
-    st.info("ℹ️ Passe a URL da imagem na barra de endereços: `?img_url=https://...`")
+        print(f"[ERRO] {str(e)}")
+        return f"❌ Erro: {str(e)}"
