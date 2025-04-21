@@ -2,7 +2,7 @@
 name = "remover_fundo"
 version = "0.1.0"
 description = "Projeto para remover fundo de imagens"
-authors = ["Seu Nome <seu_email@dominio.com>"]
+authors = ["Seu Nome <caiojmagni@hotmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.11"
