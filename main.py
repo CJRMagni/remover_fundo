@@ -12,36 +12,50 @@
 import streamlit as st
 from rembg import remove
 from PIL import Image
-import io
+import requests
+from io import BytesIO
 
-st.set_page_config(page_title="Removedor de Fundo", page_icon="🖼️")
+st.set_page_config(page_title="Remover Fundo via URL")
 
-st.title("🖼️ Removedor de Fundo de Imagens")
-st.write("Faça upload de uma imagem e veja o fundo ser removido automaticamente!")
+st.title("🖼️ Removedor de Fundo (por URL)")
 
-# Upload da imagem
-imagem_enviada = st.file_uploader("Escolha uma imagem", type=["png", "jpg", "jpeg"])
+# Logs visuais
+st.subheader("🧪 Logs do processo")
 
-if imagem_enviada is not None:
-    # Exibe imagem original
-    imagem_original = Image.open(imagem_enviada).convert("RGBA")
-    st.subheader("Imagem Original")
-    st.image(imagem_original, use_column_width=True)
+# Pega a URL da imagem via query param
+params = st.experimental_get_query_params()
+img_url = params.get("img", [None])[0]
 
-    # Remove fundo
-    with st.spinner("Removendo fundo..."):
-        imagem_sem_fundo = remove(imagem_original)
+if img_url:
+    st.write(f"🔗 URL recebida: {img_url}")
+    print(f"[LOG] URL recebida: {img_url}")
 
-    # Exibe imagem modificada
-    st.subheader("Imagem sem fundo")
-    st.image(imagem_sem_fundo, use_column_width=True)
+    try:
+        st.write("📥 Baixando imagem da internet...")
+        print("[LOG] Baixando imagem da URL...")
 
-    # Botão para download
-    img_bytes = io.BytesIO()
-    imagem_sem_fundo.save(img_bytes, format="PNG")
-    st.download_button(
-        label="📥 Baixar imagem sem fundo",
-        data=img_bytes.getvalue(),
-        file_name="imagem_sem_fundo.png",
-        mime="image/png"
-    )
+        response = requests.get(img_url)
+        if response.status_code != 200:
+            raise Exception(f"Erro ao baixar imagem. Código: {response.status_code}")
+
+        st.write("📷 Convertendo imagem...")
+        img = Image.open(BytesIO(response.content)).convert("RGBA")
+        st.image(img, caption="Imagem original")
+        print("[LOG] Imagem carregada com sucesso.")
+
+        st.write("🧼 Removendo fundo...")
+        img_sem_fundo = remove(img)
+        print("[LOG] Fundo removido com sucesso.")
+
+        st.image(img_sem_fundo, caption="Imagem sem fundo")
+        st.success("✅ Imagem processada com sucesso!")
+
+    except Exception as e:
+        st.error(f"Erro ao processar imagem: {e}")
+        print(f"[ERRO] {e}")
+
+else:
+    st.info("ℹ️ Adicione uma imagem via URL no parâmetro ?img=...")
+    st.code("Exemplo: https://seu-app.streamlit.app/?img=https://exemplo.com/imagem.jpg")
+    print("[LOG] Nenhuma URL recebida.")
+
