@@ -9,41 +9,46 @@
 
 #saida.save(caminho_saida) 
 
-from flask import Flask, request, send_file, jsonify
+import streamlit as st
 from rembg import remove
 from PIL import Image
 import requests
 from io import BytesIO
 
-app = Flask(__name__)
+st.set_page_config(page_title="Remover Fundo", layout="centered")
 
-@app.route('/')
-def index():
-    img_url = request.args.get('img_url')
-    if not img_url:
-        return '''
-            <h2>Envie uma imagem com fundo para remover</h2>
-            Exemplo: ?img_url=https://site.com/imagem.jpg
-        '''
+st.title("🖼️ Removedor de Fundo de Imagens")
 
-    try:
-        print(f"[INFO] Baixando imagem de: {img_url}")
-        r = requests.get(img_url)
-        r.raise_for_status()
+# Pega a URL da imagem pela query string
+query_params = st.experimental_get_query_params()
+img_url = query_params.get("img_url", [None])[0]
 
-        input_image = Image.open(BytesIO(r.content)).convert("RGBA")
+if not img_url:
+    st.info("Adicione `?img_url=SUA_IMAGEM` na URL para remover o fundo.")
+    st.stop()
 
-        print(f"[INFO] Removendo fundo...")
-        output_image = remove(input_image)
+st.write("🔗 URL da imagem recebida:")
+st.code(img_url)
 
-        print(f"[INFO] Fundo removido com sucesso")
+try:
+    st.write("📥 Baixando imagem...")
+    response = requests.get(img_url)
+    response.raise_for_status()
 
-        buf = BytesIO()
-        output_image.save(buf, format="PNG")
-        buf.seek(0)
+    input_image = Image.open(BytesIO(response.content)).convert("RGBA")
+    st.image(input_image, caption="Imagem original", use_column_width=True)
 
-        return send_file(buf, mimetype='image/png')
-    
-    except Exception as e:
-        print(f"[ERRO] {str(e)}")
-        return f"❌ Erro: {str(e)}"
+    st.write("✂️ Removendo fundo...")
+    output_image = remove(input_image)
+
+    st.image(output_image, caption="Imagem sem fundo", use_column_width=True)
+
+    # Gerar botão para download da imagem
+    buf = BytesIO()
+    output_image.save(buf, format="PNG")
+    buf.seek(0)
+
+    st.download_button("📥 Baixar imagem sem fundo", buf, file_name="sem_fundo.png", mime="image/png")
+
+except Exception as e:
+    st.error(f"Erro ao processar imagem: {e}")
