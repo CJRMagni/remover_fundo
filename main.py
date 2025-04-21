@@ -15,30 +15,26 @@ from PIL import Image
 import requests
 from io import BytesIO
 
-st.title("Remover Fundo de Imagem")
+st.title("🔍 Remoção de Fundo de Imagem")
 
-# Recebe a URL da imagem via query string
-img_url = st.experimental_get_query_params().get("img_url", [None])[0]
+# Pega parâmetros da URL (como ?img_url=https://...)
+params = st.experimental_get_query_params()
+img_url = params.get("img_url", [None])[0]
 
 if img_url:
+    st.write(f"📡 URL recebida: {img_url}")
+
     try:
-        # Baixa a imagem da URL fornecida
-        response = requests.get(img_url)
-        if response.status_code != 200:
-            raise Exception(f"Erro ao baixar imagem: {response.status_code}")
+        res = requests.get(img_url)
+        res.raise_for_status()
 
-        # Converte a imagem para formato adequado
-        img = Image.open(BytesIO(response.content)).convert("RGBA")
-        st.image(img, caption="Imagem Original", use_column_width=True)
+        image = Image.open(BytesIO(res.content)).convert("RGBA")
+        st.image(image, caption="📸 Imagem Original")
 
-        # Remove o fundo
-        img_sem_fundo = remove(img)
-        st.image(img_sem_fundo, caption="Imagem sem fundo", use_column_width=True)
-        st.success("✅ Imagem processada com sucesso!")
+        output = remove(image)
+        st.image(output, caption="✅ Imagem sem fundo")
 
     except Exception as e:
-        st.error(f"Erro ao processar imagem: {e}")
+        st.error(f"❌ Erro ao processar imagem: {e}")
 else:
-    st.info("ℹ️ Por favor, forneça uma URL de imagem válida.")
-
-
+    st.info("ℹ️ Passe a URL da imagem na barra de endereços: `?img_url=https://...`")
